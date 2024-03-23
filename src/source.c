@@ -93,8 +93,10 @@
 #include "client.h"
 
 /* in microseconds */
-#define READ_RETRY_DELAY 400
-#define READ_TIMEOUT 16000
+// #define READ_RETRY_DELAY 400
+#define READ_RETRY_DELAY 1000
+// #define READ_TIMEOUT 16000
+#define READ_TIMEOUT 64000
 
 extern int running;
 extern server_info_t info;
@@ -255,9 +257,10 @@ source_func(void *conarg)
 
 	while (thread_alive (mt) && ((source->connected == SOURCE_CONNECTED) || (source->connected == SOURCE_PAUSED)))
 	{
-		source_get_new_clients (source);
+		// source_get_new_clients (source);
 
 		add_chunk(con);
+    source_get_new_clients (source);
 		
 		for (i = 0; i < 10; i++) {
 			
@@ -463,8 +466,8 @@ add_chunk (connection_t *con)
 	        sock_set_blocking(con->sock, SOCK_BLOCK);
 #endif
 
-		len = recv(con->sock, con->food.source->chunk[con->food.source->cid].data + read_bytes, SOURCE_READSIZE - read_bytes, 0);
-		
+		// len = recv(con->sock, con->food.source->chunk[con->food.source->cid].data + read_bytes, SOURCE_READSIZE - read_bytes, 0);
+    len = recv(con->sock, con->food.source->chunk[con->food.source->cid].data + read_bytes, SOURCE_BUFFSIZE - read_bytes, 0);
 		xa_debug (5, "DEBUG: Source received %d bytes in try %d, total %d, errno: %d", len, tries, read_bytes, errno);
 
 #ifdef _WIN32
@@ -507,16 +510,23 @@ add_chunk (connection_t *con)
 				return;
 			}
 		} else if (len > 0) {
-			read_bytes += len;
-			stat_add_read(&con->food.source->stats, len);
-			info.hourly_stats.read_bytes += len;
+			// read_bytes += len;
+			// stat_add_read(&con->food.source->stats, len);
+			// info.hourly_stats.read_bytes += len;
+      do {
+             read_bytes += len;
+             stat_add_read(&con->food.source->stats, len);
+             info.hourly_stats.read_bytes += len;
+             len = recv(con->sock, con->food.source->chunk[con->food.source->cid].data + read_bytes, SOURCE_BUFFSIZE - read_bytes, 0);
+          } while (len > 0);
+      break;
 		} else {
 			my_sleep(READ_RETRY_DELAY * 1000);
 		}
 
 		tries++;
-		
-	} while ((((double)read_bytes < ((double)SOURCE_READSIZE*3.0)/4.0) && (tries < (READ_TIMEOUT / READ_RETRY_DELAY))));
+	// } while ((((double)read_bytes < ((double)SOURCE_READSIZE*3.0)/4.0) && (tries < (READ_TIMEOUT / READ_RETRY_DELAY))));	
+	} while (tries < (READ_TIMEOUT / READ_RETRY_DELAY));
 
 	if (read_bytes <= 0) {
 		write_log(LOG_DEFAULT, "Didn't receive data from source after %d microseconds, assuming it died...", tries * READ_RETRY_DELAY);
@@ -778,6 +788,7 @@ source_write_to_client (source_t *source, connection_t *clicon)
 	if (client->virgin == 1) {
 		client->cid = start_chunk (source); 
 		client->offset = find_frame_ofs(source);
+		client->offset = find_frame_ofs(source) + 1;
 		xa_debug (2, "Client got offset %d", client->offset);
 		client->virgin = 0;
 		source->num_clients = source->num_clients + (unsigned long int)1;
