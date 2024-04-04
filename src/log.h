@@ -41,6 +41,7 @@
 #ifndef __ICECAST_LOG_H
 #define __ICECAST_LOG_H
 
+void write_hex_data(int whichlog, char *buff, int len)
 void write_log(int whichlog, char *fmt, ...);
 void xa_debug (int level, char *fmt, ...);
 void my_perror(char *where);

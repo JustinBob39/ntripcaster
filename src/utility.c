@@ -150,6 +150,7 @@ int password_match(const char *crypted, const char *uncrypted)
 
 int find_frame_ofs(source_t *source)
 {
+    return 0;
 	char *buff;
 	int pos = 0, cid;
 	

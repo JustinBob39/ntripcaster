@@ -120,8 +120,8 @@ splitc (char *first, char *rest, const char divider)
 
 	*p = 0;
 	if (first != NULL) strcpy(first, rest);
-	// if (first != rest) strcpy(rest, p + 1);
-  if (first != rest) memmove(rest, p + 1, strlen(p + 1) + 1);
+    // if (first != rest) strcpy(rest, p + 1);
+	if (first != rest) memmove(rest, p + 1, strlen(p + 1) + 1);
 
 	return rest;
 }

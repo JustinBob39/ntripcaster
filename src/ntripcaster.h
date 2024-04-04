@@ -151,8 +151,7 @@ typedef enum type_e {integer_e, real_e, string_e, function_e} type_t;
 #define BUFSIZE 1000
 #define CHUNKLEN 64
 #define MAXMETADATALENGTH (100)
-// #define SOURCE_BUFFSIZE 1000
-#define SOURCE_BUFFSIZE 1024
+#define SOURCE_BUFFSIZE 1000
 #define SOURCE_READSIZE (100)
 #define MAXLISTEN 5		/* max number of listening ports */
 

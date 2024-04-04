@@ -59,4 +59,5 @@ const char *sourcetype_to_string (source_type_t type);
 int start_chunk (source_t *source);
 void source_write_to_client (source_t *source, connection_t *clicon);
 void source_get_new_clients (source_t *source);
+void source_write_to_client_logger(source_t *source, connection_t *clicon);
 #endif

@@ -109,6 +109,50 @@ get_log_fd (int whichlog)
 	return -1;
 }
 
+void
+write_hex_data(int whichlog, char *buff, int len)
+{
+    char *logtime;
+    mythread_t *mt = thread_check_created ();
+    int fd = get_log_fd (whichlog);
+
+    if (!mt)
+        fprintf (stderr, "WARNING: No mt while outputting [%s]", buf);
+
+    logtime = get_log_time();
+
+    if (mt && fd != -1) {
+        if ((whichlog != LOG_DEFAULT) || (info.logfiledebuglevel > -1)) {
+            fd_write (fd, "[%s] [%d:%s] ", logtime, mt->id, nullcheck_string (mt->name));
+            for (int i = 0; i < len; ++i) {
+                fd_write(fd, "%02x", (unsigned char)(*(buff + i)));
+            }
+            fd_write("\n");
+        }
+    }
+
+    if (whichlog != LOG_DEFAULT)
+    {
+        free (logtime);
+        return;
+    }
+
+    int out_err = -1;
+    if (running == SERVER_RUNNING) {
+        out_err = stdout;
+    } else {
+        out_err = stderr;
+    }
+    fprintf(out_err, "[%s] ", logtime);
+    for (int i = 0; i < len; ++i) {
+        fprintf(out_err, "%02x", (unsigned char)(*(buff + i)));
+    }
+    fprintf(out_err, "\n");
+    fflush(stdout);
+
+    if (logtime)
+        free(logtime);
+}
 
 void 
 write_log (int whichlog, char *fmt, ...)

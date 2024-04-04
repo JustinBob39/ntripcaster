@@ -93,10 +93,8 @@
 #include "client.h"
 
 /* in microseconds */
-// #define READ_RETRY_DELAY 400
-#define READ_RETRY_DELAY 1000
-// #define READ_TIMEOUT 16000
-#define READ_TIMEOUT 64000
+#define READ_RETRY_DELAY 400
+#define READ_TIMEOUT 16000
 
 extern int running;
 extern server_info_t info;
@@ -257,10 +255,9 @@ source_func(void *conarg)
 
 	while (thread_alive (mt) && ((source->connected == SOURCE_CONNECTED) || (source->connected == SOURCE_PAUSED)))
 	{
-		// source_get_new_clients (source);
+		source_get_new_clients (source);
 
 		add_chunk(con);
-    source_get_new_clients (source);
 		
 		for (i = 0; i < 10; i++) {
 			
@@ -467,8 +464,9 @@ add_chunk (connection_t *con)
 #endif
 
 		// len = recv(con->sock, con->food.source->chunk[con->food.source->cid].data + read_bytes, SOURCE_READSIZE - read_bytes, 0);
-    len = recv(con->sock, con->food.source->chunk[con->food.source->cid].data + read_bytes, SOURCE_BUFFSIZE - read_bytes, 0);
-		xa_debug (5, "DEBUG: Source received %d bytes in try %d, total %d, errno: %d", len, tries, read_bytes, errno);
+        len = recv(con->sock, con->food.source->chunk[con->food.source->cid].data + read_bytes, SOURCE_BUFFSIZE + MAXMETADATALENGTH - read_bytes, 0);
+
+        xa_debug (5, "DEBUG: Source received %d bytes in try %d, total %d, errno: %d", len, tries, read_bytes, errno);
 
 #ifdef _WIN32
 		sock_set_blocking(con->sock, SOCK_NONBLOCK);
@@ -513,20 +511,20 @@ add_chunk (connection_t *con)
 			// read_bytes += len;
 			// stat_add_read(&con->food.source->stats, len);
 			// info.hourly_stats.read_bytes += len;
-      do {
-             read_bytes += len;
-             stat_add_read(&con->food.source->stats, len);
-             info.hourly_stats.read_bytes += len;
-             len = recv(con->sock, con->food.source->chunk[con->food.source->cid].data + read_bytes, SOURCE_BUFFSIZE - read_bytes, 0);
-          } while (len > 0);
-      break;
+            do {
+                read_bytes += len;
+                stat_add_read(&con->food.source->stats, len);
+                info.hourly_stats.read_bytes += len;
+                len = recv(con->sock, con->food.source->chunk[con->food.source->cid].data + read_bytes, SOURCE_BUFFSIZE + MAXMETADATALENGTH - read_bytes, 0);
+            } while (len > 0);
+            break;
 		} else {
 			my_sleep(READ_RETRY_DELAY * 1000);
 		}
 
 		tries++;
-	// } while ((((double)read_bytes < ((double)SOURCE_READSIZE*3.0)/4.0) && (tries < (READ_TIMEOUT / READ_RETRY_DELAY))));	
-	} while (tries < (READ_TIMEOUT / READ_RETRY_DELAY));
+	} while (true);
+	// } while ((((double)read_bytes < ((double)SOURCE_READSIZE*3.0)/4.0) && (tries < (READ_TIMEOUT / READ_RETRY_DELAY))));
 
 	if (read_bytes <= 0) {
 		write_log(LOG_DEFAULT, "Didn't receive data from source after %d microseconds, assuming it died...", tries * READ_RETRY_DELAY);
@@ -720,6 +718,22 @@ kick_dead_clients(source_t *source)
 #endif
 }
 
+void
+source_write_to_client_logger(source_t *source, connection_t *clicon) {
+    char *mount = source->audiocast.mount;
+    char *user = clicon->user;
+    struct sockaddr_in *sa_in = clicon->sin;
+    char addr_buf[INET_ADDRSTRLEN];
+    char *addr_str = inet_ntop(AF_INET, &(sa_in->sin_addr), addr_buf, INET_ADDRSTRLEN);
+    unsigned short port = htons(sa_in->sin_port);
+    char *con_time = get_string_time(clicon->connect_time);
+    write_log(LOG_DEFAULT, "Source(%s) write to Client(%s at %s:%d begin %s)",
+              mount, user, addr_str, port, con_time);
+    char *buff = &source->chunk[clicon->food.client->cid].data[clicon->food.client->offset];
+    int len = source->chunk[clicon->food.client->cid].len - clicon->food.client->offset;
+    write_hex_data(LOG_DEFAULT, buff, len);
+}
+
 int
 write_data (connection_t *clicon, source_t *source)
 {
@@ -730,6 +744,9 @@ write_data (connection_t *clicon, source_t *source)
 	
 	write_bytes = sock_write_bytes_or_kick(clicon->sock, clicon, &source->chunk[clicon->food.client->cid].data[clicon->food.client->offset], 
 					       source->chunk[clicon->food.client->cid].len - clicon->food.client->offset);
+    if (write_bytes > 0) {
+        source_write_to_client_logger(source, clicon);
+    }
 	
 #ifndef OPTIMIZE
 	xa_debug (4, "DEBUG: client %d in write_data(). Function write() returned %d of %d bytes, client on chunk %d (+%d), source on chunk %d", clicon->id, write_bytes,
@@ -788,7 +805,6 @@ source_write_to_client (source_t *source, connection_t *clicon)
 	if (client->virgin == 1) {
 		client->cid = start_chunk (source); 
 		client->offset = find_frame_ofs(source);
-		client->offset = find_frame_ofs(source) + 1;
 		xa_debug (2, "Client got offset %d", client->offset);
 		client->virgin = 0;
 		source->num_clients = source->num_clients + (unsigned long int)1;
