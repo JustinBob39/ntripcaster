@@ -156,7 +156,20 @@ sock_find (SOCKET s)
 
 int sock_valid(const SOCKET sockfd)
 {
-	return ((int)sockfd >= 0);
+  if (sockfd < 0) {
+      return 0;
+  }
+  char tcp_buf[1024];
+  int tcp_state = recv(sockfd, tcp_buf, sizeof(tcp_buf), 0);
+  if (tcp_state >= 0) {
+      return 1;
+  } else {
+      if (!is_recoverable(errno)) {
+          return 1;
+      } else {
+          return 0;
+      }
+  }
 }
 
 /*
