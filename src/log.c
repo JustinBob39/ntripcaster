@@ -117,7 +117,7 @@ write_hex_data(int whichlog, char *buff, int len)
     int fd = get_log_fd (whichlog);
 
     if (!mt)
-        fprintf (stderr, "WARNING: No mt while outputting [%s]", buf);
+        fprintf (stderr, "WARNING: No mt while outputting hex data");
 
     logtime = get_log_time();
 
@@ -127,7 +127,7 @@ write_hex_data(int whichlog, char *buff, int len)
             for (int i = 0; i < len; ++i) {
                 fd_write(fd, "%02x", (unsigned char)(*(buff + i)));
             }
-            fd_write("\n");
+            fd_write(fd, "\n");
         }
     }
 
@@ -137,7 +137,7 @@ write_hex_data(int whichlog, char *buff, int len)
         return;
     }
 
-    int out_err = -1;
+    FILE *out_err = NULL;
     if (running == SERVER_RUNNING) {
         out_err = stdout;
     } else {

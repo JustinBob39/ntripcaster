@@ -523,7 +523,7 @@ add_chunk (connection_t *con)
 		}
 
 		tries++;
-	} while (true);
+	} while (1);
 	// } while ((((double)read_bytes < ((double)SOURCE_READSIZE*3.0)/4.0) && (tries < (READ_TIMEOUT / READ_RETRY_DELAY))));
 
 	if (read_bytes <= 0) {
@@ -726,9 +726,9 @@ source_write_to_client_logger(source_t *source, connection_t *clicon) {
     char addr_buf[INET_ADDRSTRLEN];
     char *addr_str = inet_ntop(AF_INET, &(sa_in->sin_addr), addr_buf, INET_ADDRSTRLEN);
     unsigned short port = htons(sa_in->sin_port);
-    char *con_time = get_string_time(clicon->connect_time);
+    char *con_time = get_string_time(clicon->connect_time, REGULAR_TIME);
     write_log(LOG_DEFAULT, "Source(%s) write to Client(%s at %s:%d begin %s)",
-              mount, user, addr_str, port, con_time);
+              mount, user, addr_buf, port, con_time);
     char *buff = &source->chunk[clicon->food.client->cid].data[clicon->food.client->offset];
     int len = source->chunk[clicon->food.client->cid].len - clicon->food.client->offset;
     write_hex_data(LOG_DEFAULT, buff, len);
