@@ -121,8 +121,9 @@ void client_login(connection_t *con, char *expr)
 {
 	char line[BUFSIZE];
 	int go_on = 1;
-	connection_t *source;
+	connection_t *source_arr[3] = {NULL, NULL, NULL};
 	request_t req;
+    int all_null = 1;
 
 
 	xa_debug(3, "Client login...\n");
@@ -134,7 +135,10 @@ void client_login(connection_t *con, char *expr)
 
 	zero_request(&req);
 
-	con->headervars = create_header_vars ();
+	connection_t *con_arr[3] = {con, duplicate_connection(con), duplicate_connection(con)};
+	for (int i = 0; i < 3; ++i) {
+        con_arr[i]->headervars = create_header_vars();
+	}
 
 	do {
 		if (splitc(line, expr, '\n') == NULL) {
@@ -147,28 +151,37 @@ void client_login(connection_t *con, char *expr)
 		} else {
       			if (ice_strncmp(line, "Host:", 5) == 0 || (ice_strncmp(line, "HOST:", 5) == 0))
       				build_request(line, &req);
-			else
-				extract_header_vars (line, con->headervars);
+				else {
+					for (int i = 0; i < 3; ++i) {
+                    	extract_header_vars(line, con_arr[i]->headervars);
+                    }
+                }
 		}
 	} while (go_on);
 
 	if (!authenticate_user_request (con, &req))
 	{
 		write_401 (con, req.path);
-		kick_not_connected (con, "Not authorized");
+        for (int i = 0; i < 3; ++i) {
+        	kick_not_connected (con_arr[i], "Not authorized");
+        }
 		return;
 	}
 
 	if (((req.path[0] == '/') && (req.path[1] == '\0')) || (req.path[0] == '\0')) {
 		send_sourcetable(con);
-		kick_not_connected (con, "Sourcetable transferred");
+		for (int i = 0; i < 3; ++i) {
+			kick_not_connected (con_arr[i], "Sourcetable transferred");
+		}
 		return;
 	}
-	
+
 	if (strncasecmp(get_user_agent(con), "ntrip", 5) != 0) {
 		write_401 (con, req.path);
-		kick_not_connected (con, "No NTRIP client");
-		return;	
+		for (int i = 0; i < 3; ++i) {
+			kick_not_connected (con_arr[i], "No NTRIP client");
+		}
+		return;
 	}
 
 	xa_debug (1, "Looking for mount [%s:%d%s]", req.host, req.port, req.path);
@@ -177,56 +190,63 @@ void client_login(connection_t *con, char *expr)
 //	thread_mutex_lock (&info.mount_mutex);
 	thread_mutex_lock (&info.source_mutex);
 
-	source = find_mount_with_req (&req);
+	if (req.new_path[0][0] == '\0') {
+		source_arr[0] = find_mount_with_req(&req);
+    } else {
+    	for (int i = 0; i < 3; ++i) {
+			strcpy(req.path, req.new_path[i]);
+            source_arr[i] = find_mount_with_req(&req);
+        }
+    }
 
 //	thread_mutex_unlock (&info.mount_mutex);
 //	thread_mutex_unlock (&info.double_mutex);
 
-	if (source == NULL)  {
-	
-		thread_mutex_unlock (&info.source_mutex);
-		thread_mutex_unlock (&info.double_mutex);
+    for (int i = 0; i < 3; ++i) {
+    	if (source_arr[i] != NULL) {
+    		if ((info.num_clients >= info.max_clients)
+			  || (source_arr[i]->food.source->num_clients >= info.max_clients_per_source))
+    		{
+    			if (info.num_clients >= info.max_clients)
+    				xa_debug (2, "DEBUG: inc > imc: %lu %lu", info.num_clients, info.max_clients);
+    			else if (source_arr[i]->food.source->num_clients >= info.max_clients_per_source)
+    				xa_debug (2, "DEBUG: snc > smc: %lu %lu", source_arr[i]->food.source->num_clients, info.max_clients_per_source);
+    			else
+    				xa_debug (1, "ERROR: Erroneous number of clients, what the hell is going on?");
 
-		send_sourcetable(con);
-		kick_not_connected (con, "Transfer Sourcetable");
-		return;
-	} else {
-		if ((info.num_clients >= info.max_clients) 
-		|| (source->food.source->num_clients >= info.max_clients_per_source))
-		{
-			thread_mutex_unlock (&info.source_mutex);
-			thread_mutex_unlock (&info.double_mutex);
+    			kick_not_connected (con_arr[i], "Server Full (too many listeners)");
+    			continue;
+    		}
 
-			if (info.num_clients >= info.max_clients)
-				xa_debug (2, "DEBUG: inc > imc: %lu %lu", info.num_clients, info.max_clients);
-			else if (source->food.source->num_clients >= info.max_clients_per_source)
-				xa_debug (2, "DEBUG: snc > smc: %lu %lu", source->food.source->num_clients, info.max_clients_per_source);
-			else 
-				xa_debug (1, "ERROR: Erroneous number of clients, what the hell is going on?");
-	
-			kick_not_connected (con, "Server Full (too many listeners)");
-			return;
-		}
-
-		put_client(con);
-		con->food.client->type = listener_e;
-		con->food.client->source = source->food.source;
-		source->food.source->stats.client_connections++;
-		if (req.user[0] != '\0') con->user = strdup(req.user);
-		{
-			const char *ref = get_con_variable (con, "Referer");
-			if (ref && ice_strcmp (ref, "RELAY") == 0)
-				con->food.client->type = pulling_client_e;
-		}
-		pool_add (con);
-		greet_client(con, source->food.source);
-
-	}
-
+    		all_null = 0;
+    		put_client(con_arr[i]);
+    		con_arr[i]->food.client->type = listener_e;
+    		con_arr[i]->food.client->source = source_arr[i]->food.source;
+    		source_arr[i]->food.source->stats.client_connections++;
+    		if (req.user[0] != '\0') con_arr[i]->user = strdup(req.user);
+    		{
+        		const char *ref = get_con_variable (con_arr[i], "Referer");
+        		if (ref && ice_strcmp (ref, "RELAY") == 0)
+        			con_arr[i]->food.client->type = pulling_client_e;
+    		}
+    		pool_add (con_arr[i]);
+    		greet_client(con_arr[i], source_arr[i]->food.source);
+    		util_increase_total_clients ();
+    		write_log(LOG_DEFAULT, "Accepted client %d [%s] from [%s] on mountpoint [%s]. %d clients connected.", con_arr[i]->id,
+                          nullcheck_string(con_arr[i]->user), con_host (con_arr[i]), source_arr[i]->food.source->audiocast.mount, info.num_clients);
+    	}
+    }
 	thread_mutex_unlock (&info.source_mutex);
 	thread_mutex_unlock (&info.double_mutex);
+    if (all_null) {
+    	send_sourcetable(con);
+    }
+	for (int i = 0; i < 3; ++i) {
+		if (source_arr[i] == NULL) {
+			kick_not_connected (con, "Mountpoint illegal");
+		}
+	}
 
-	util_increase_total_clients ();
 /*
 	// Change the sockaddr_in for the client to point to the port the client specified
 	if (con->sin)
@@ -240,9 +260,6 @@ void client_login(connection_t *con, char *expr)
 		}
 	}
 */
-
-	write_log(LOG_DEFAULT, "Accepted client %d [%s] from [%s] on mountpoint [%s]. %d clients connected", con->id,
-		nullcheck_string(con->user), con_host (con), source->food.source->audiocast.mount, info.num_clients);
 
 //	greet_client(con, source->food.source);
 }

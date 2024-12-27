@@ -44,6 +44,7 @@
 void *handle_connection(void *data);
 connection_t *get_connection(int *sock);
 connection_t *create_connection();
+connection_t * duplicate_connection(connection_t *con);
 const char *get_user_agent (connection_t *con);
 
 #endif

@@ -229,7 +229,7 @@ free_con (connection_t *con)
 	if (con->sock >= 0)
 	{
 		if (!(con->host && ice_strcmp (con->host, "NtripCaster console") == 0)) {	
-			sock_close (con->sock);
+			sock_close (con->sock); // socket fd close here
 			con->sock = -1;
 		}
 	}
@@ -585,6 +585,8 @@ build_request (char *line, request_t *req)
 {
 	char path[BUFSIZE] = "";
 	char *ptr, *lineptr;
+	char *saved, *token, *prefix;
+    int i = 0;
 
 	if (!line || !req)
 	{
@@ -676,8 +678,20 @@ build_request (char *line, request_t *req)
 			if (splitc (pathbuf, path, ' ') == NULL)
 				strncpy (pathbuf, path, BUFSIZE);
 
-			if (pathbuf[0] == '/')
+			if (pathbuf[0] == '/') {
+				// modify here
 				strncpy (req->path, pathbuf, BUFSIZE);
+				token = strtok_r(pathbuf, "_", &saved);
+				if (token != NULL) {
+					prefix = token;
+					token = strtok_r(NULL, "_", &saved);
+					while (token != NULL && i < 3) {
+						snprintf(req->new_path[i], BUFSIZE, "%s_%s", prefix, token);
+						token = strtok_r(NULL, "_", &saved);
+						++i;
+					}
+				}
+            }
 			else
 				snprintf (req->path, BUFSIZE, "/%s", pathbuf);
 

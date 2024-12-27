@@ -150,7 +150,7 @@ void *handle_connection(void *arg)
 	}
 
 	if (info.reverse_lookups)
-		con->hostname = reverse(con->host);
+		con->hostname = reverse(con->host); // connection hostname set here
 
 	sock_set_blocking(con->sock, SOCK_BLOCK);
 	
@@ -185,6 +185,22 @@ create_connection()
 	con->food.source = NULL;
 	con->user = NULL;
 	return con;
+}
+
+connection_t *
+duplicate_connection(connection_t *con)
+{
+	connection_t *ret = create_connection();
+	// type, food, headervars, user not set yet
+	ret->id = new_id(); // fine
+	ret->sin =  (struct sockaddr_in *)nmalloc(sizeof(struct sockaddr_in));
+	memcpy(ret->sin, con->sin, sizeof(struct sockaddr_in)); // fine
+	ret->sinlen = con->sinlen; // fine
+	ret->sock = dup(con->sock); // fine
+	ret->connect_time = con->connect_time; // fine
+	ret->host = nstrdup(con->host); // fine
+	ret->hostname = nstrdup(con->hostname); // fine
+	return ret;
 }
 
 connection_t *
@@ -236,7 +252,7 @@ get_connection (sock_t *sock)
 	sockfd = sock_accept(sock[i], (struct sockaddr *)sin, &sin_len);
   
 	if (sockfd >= 0) {
-		con = create_connection();
+		con = create_connection(); // connection initialize
 		if (!sin)
 		{
 			xa_debug (1, "ERROR: NULL sockaddr struct, wft???");

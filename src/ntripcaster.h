@@ -183,6 +183,7 @@ typedef struct varpair_St
 typedef struct request_St
 {
 	char path[BUFSIZE];
+    char new_path[3][BUFSIZE];
 	char host[BUFSIZE];
 	char user[BUFSIZE];
 	int port;
