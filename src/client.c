@@ -243,7 +243,7 @@ void client_login(connection_t *con, char *expr)
     }
 	for (int i = 0; i < 3; ++i) {
 		if (source_arr[i] == NULL) {
-			kick_not_connected (con, "Mountpoint illegal");
+			kick_not_connected (con_arr[i], "Mountpoint illegal");
 		}
 	}
 
