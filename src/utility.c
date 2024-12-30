@@ -690,6 +690,11 @@ build_request (char *line, request_t *req)
 						token = strtok_r(NULL, "_", &saved);
 						++i;
 					}
+                    for (int i = 0; i < BUFSIZE; ++i) {
+                      	if (req->path[i] == '_') {
+                          	req->path[i] = '\0';
+                        }
+                    }
 				}
             }
 			else
@@ -780,6 +785,9 @@ zero_request (request_t *req)
 {
 	req->host[0] = '\0';
 	req->path[0] = '\0';
+    req->new_path[0][0] = '\0';
+	req->new_path[1][0] = '\0';
+	req->new_path[2][0] = '\0';
 	req->user[0] = '\0';
 	req->port = -1;
 }
