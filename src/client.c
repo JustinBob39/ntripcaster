@@ -198,6 +198,12 @@ void client_login(connection_t *con, char *expr)
             source_arr[i] = find_mount_with_req(&req);
         }
     }
+    for (int i = 0; i < 3; ++i) {
+        show_connection(con_arr[i]);
+        if (source_arr[i] != NULL) {
+        	write_log(LOG_DEFAULT, "%d match %s", i, source_arr[i]->food.source->audiocast.mount);
+        }
+    }
 
 //	thread_mutex_unlock (&info.mount_mutex);
 //	thread_mutex_unlock (&info.double_mutex);

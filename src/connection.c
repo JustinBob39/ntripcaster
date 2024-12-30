@@ -203,6 +203,12 @@ duplicate_connection(connection_t *con)
 	return ret;
 }
 
+void
+show_connection(connection_t *con)
+{
+    write_log (LOG_DEFAULT, "id %d, sock %d, host %s", con->id, con->sock, con->host);
+}
+
 connection_t *
 get_connection (sock_t *sock)
 {
