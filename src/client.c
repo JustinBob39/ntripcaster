@@ -220,7 +220,8 @@ void client_login(connection_t *con, char *expr)
     			else
     				xa_debug (1, "ERROR: Erroneous number of clients, what the hell is going on?");
 
-    			kick_not_connected (con_arr[i], "Server Full (too many listeners)");
+    			// kick_not_connected (con_arr[i], "Server Full (too many listeners)");
+                source_arr[i] = NULL;
     			continue;
     		}
 
@@ -249,7 +250,7 @@ void client_login(connection_t *con, char *expr)
     }
 	for (int i = 0; i < 3; ++i) {
 		if (source_arr[i] == NULL) {
-			kick_not_connected (con_arr[i], "Mountpoint illegal");
+			kick_not_connected (con_arr[i], "Mountpoint illegal or full");
 		}
 	}
 

@@ -199,7 +199,7 @@ duplicate_connection(connection_t *con)
 	ret->sock = dup(con->sock); // fine
 	ret->connect_time = con->connect_time; // fine
 	ret->host = nstrdup(con->host); // fine
-	ret->hostname = nstrdup(con->hostname); // fine
+	ret->hostname = (con->hostname == NULL ? NULL : nstrdup(con->hostname)); // fine
 	return ret;
 }
 
