@@ -258,6 +258,8 @@ source_func(void *conarg)
 		source_get_new_clients (source);
 
 		add_chunk(con);
+
+		source_get_new_clients (source);
 		
 		for (i = 0; i < 10; i++) {
 			
