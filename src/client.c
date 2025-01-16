@@ -194,6 +194,9 @@ void client_login(connection_t *con, char *expr)
 		source_arr[0] = find_mount_with_req(&req);
     } else {
     	for (int i = 0; i < 3; ++i) {
+			if (req.new_path[i][0] == '\0') {
+            	continue;
+            }
 			strcpy(req.path, req.new_path[i]);
             source_arr[i] = find_mount_with_req(&req);
         }
