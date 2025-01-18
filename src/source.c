@@ -98,6 +98,7 @@
 
 extern int running;
 extern server_info_t info;
+extern ASF_cache_t asf_cache;
 
 void source_login(connection_t *con, char *expr)
 {
@@ -562,6 +563,12 @@ add_chunk (connection_t *con)
 #ifndef OPTIMIZE
 	xa_debug (4, "-------add_chunk: Chunk %d was [%d] bytes", con->food.source->cid, read_bytes );
 #endif
+
+    if (ice_strcmp(con->food.source->audiocast.mount, "/ASF") == 0) {
+    	memcpy(asf_cache.data[asf_cache.turn], con->food.source->chunk[con->food.source->cid].data, read_bytes);
+        asf_cache.len[asf_cache.turn] = read_bytes;
+        asf_cache.turn = (asf_cache.turn + 1) % 2;
+    }
 	
 	con->food.source->chunk[con->food.source->cid].len = read_bytes;
 	con->food.source->chunk[con->food.source->cid].clients_left = con->food.source->num_clients;

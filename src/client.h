@@ -70,6 +70,12 @@ typedef struct userSt {
 	char *pass;
 } ice_user_t;
 
+typedef struct ASFCacheSt {
+	int turn;
+    char data[2][1024 * 2];
+    int len[2];
+} ASF_cache_t;
+
 void init_authentication_scheme();
 void parse_authentication_scheme();
 void destroy_authentication_scheme();
