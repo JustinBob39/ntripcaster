@@ -116,7 +116,7 @@ extern mutex_t sock_mutex;
 /* global */
 server_info_t info;
 struct in_addr localaddr;
-asf_cache_t asf_cache;
+ASF_cache_t asf_cache;
 
 
 int 
