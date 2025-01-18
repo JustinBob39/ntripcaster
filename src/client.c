@@ -107,6 +107,7 @@
 /* basic.c. ajd ****************************************************/
 
 extern server_info_t info;
+extern ASF_cache_t asf_cache;
 mutex_t authentication_mutex = {MUTEX_STATE_UNINIT};
 
 mounttree_t *mounttree = NULL;
@@ -349,6 +350,13 @@ greet_client(connection_t *con, source_t *source)
 	sock_write_line (con->sock, "ICY 200 OK");
 //	sock_write_line (con->sock, "Server: NTRIP NtripCaster %s/%s", info.version, info.ntrip_version);
 //	sock_write_line (con->sock, "Date: %s %s", time, info.timezone);
+
+    if (ice_strcmp(source->audiocast.mount, "/ASF") == 0) {
+		sock_write_bytes(con->sock, asf_cache.data[0], asf_cache.len[0]);
+		my_sleep(50 * 1000);
+        sock_write_bytes(con->sock, asf_cache.data[1], asf_cache.len[1]);
+        write_log(LOG_DEFAULT, "Send ASF cache to new client");
+    }
 	
 //	free (time);
 
